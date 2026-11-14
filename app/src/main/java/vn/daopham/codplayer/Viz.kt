@@ -1,11 +1,11 @@
 package vn.daopham.codplayer
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -27,9 +26,18 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.layout.ContentScale
 import kotlinx.coroutines.isActive
 import kotlin.math.PI
 import kotlin.math.abs
@@ -164,8 +172,7 @@ class Analyzer(val bars: Int) {
 }
 
 @Composable
-fun VizStage(mode: VizMode, art: ImageBitmap?, title: String, modifier: Modifier = Modifier, onTap: () -> Unit) {
-    val h = LocalHud.current
+fun VizStage(mode: VizMode, art: ImageBitmap?, c1: Color, c2: Color, modifier: Modifier = Modifier, onTap: () -> Unit) {
     val an = remember { Analyzer(48) }
     var frame by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) {
@@ -178,41 +185,58 @@ fun VizStage(mode: VizMode, art: ImageBitmap?, title: String, modifier: Modifier
     }
     val src = remember { MutableInteractionSource() }
     Box(modifier.clickable(interactionSource = src, indication = null) { onTap() }, contentAlignment = Alignment.Center) {
-        if (mode != VizMode.RING && art != null) {
-            Image(art, null, Modifier.fillMaxSize().alpha(0.18f), contentScale = ContentScale.Crop)
-        }
-        Canvas(Modifier.fillMaxSize()) {
-            val t = frame / 1e9f
-            when (mode) {
-                VizMode.RING -> drawRing(an, h, t)
-                VizMode.BARS -> drawBars(an, h, mirror = false)
-                VizMode.MIRROR -> drawBars(an, h, mirror = true)
-                VizMode.WAVE -> drawWave(an, h, t)
+        when (mode) {
+            VizMode.ART -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .aspectRatio(1f, matchHeightConstraintsFirst = true)
+                            .padding(6.dp)
+                            .shadow(24.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                    ) { ArtOrEmblem(art, Modifier.fillMaxSize(), 72.dp) }
+                }
+                Spacer(Modifier.height(10.dp))
+                Canvas(Modifier.fillMaxWidth().height(46.dp)) {
+                    @Suppress("UNUSED_VARIABLE") val f = frame
+                    drawStrip(an, c1, c2)
+                }
             }
-        }
-        if (mode == VizMode.RING) {
-            Box(
-                Modifier
-                    .fillMaxSize(0.46f)
-                    .graphicsLayer {
-                        @Suppress("UNUSED_VARIABLE") val f = frame
-                        val s = 1f + an.bass * 0.07f
-                        scaleX = s; scaleY = s
-                    }
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                ArtOrEmblem(art, title, Modifier.fillMaxSize())
+            VizMode.RING -> {
+                Canvas(Modifier.fillMaxSize()) {
+                    @Suppress("UNUSED_VARIABLE") val f = frame
+                    drawRing(an, c1, c2)
+                }
+                Box(
+                    Modifier
+                        .fillMaxSize(0.52f)
+                        .aspectRatio(1f)
+                        .graphicsLayer {
+                            @Suppress("UNUSED_VARIABLE") val f = frame
+                            val s = 1f + an.bass * 0.05f
+                            scaleX = s; scaleY = s
+                        }
+                        .shadow(20.dp, CircleShape)
+                        .clip(CircleShape)
+                ) { ArtOrEmblem(art, Modifier.fillMaxSize(), 56.dp) }
+            }
+            VizMode.BARS -> Canvas(Modifier.fillMaxSize()) {
+                @Suppress("UNUSED_VARIABLE") val f = frame
+                drawBars(an, c1, c2)
+            }
+            VizMode.WAVE -> Canvas(Modifier.fillMaxSize()) {
+                @Suppress("UNUSED_VARIABLE") val f = frame
+                drawWave(an, c1, c2)
             }
         }
     }
 }
 
-/** Phổ nhỏ dùng trong thanh phát mini. */
+/** Phổ nhỏ dùng trong danh sách / thanh phát mini. */
 @Composable
-fun MiniBars(modifier: Modifier) {
-    val h = LocalHud.current
-    val an = remember { Analyzer(12) }
+fun MiniBars(modifier: Modifier, color: Color) {
+    val an = remember { Analyzer(4) }
     var frame by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) {
         while (isActive) {
@@ -221,141 +245,100 @@ fun MiniBars(modifier: Modifier) {
     }
     Canvas(modifier) {
         @Suppress("UNUSED_VARIABLE") val f = frame
-        val bw = size.width / an.bars
-        for (i in 0 until an.bars) {
-            val lv = max(0.06f, an.levels[i])
+        val n = an.bars
+        val bw = size.width / (n * 1.6f)
+        val gap = (size.width - bw * n) / (n - 1)
+        for (i in 0 until n) {
+            val lv = max(0.15f, an.levels[i])
             val bh = lv * size.height
-            drawRect(
-                lerp(h.primary, h.accent, lv),
-                topLeft = Offset(i * bw + bw * 0.15f, size.height - bh),
-                size = Size(bw * 0.7f, bh)
-            )
+            drawRoundRect(color, Offset(i * (bw + gap), size.height - bh), Size(bw, bh), CornerRadius(bw / 2))
         }
     }
 }
 
-private fun DrawScope.drawRing(an: Analyzer, h: Hud, t: Float) {
+private fun DrawScope.drawStrip(an: Analyzer, c1: Color, c2: Color) {
+    val n = an.bars
+    val w = size.width
+    val hh = size.height
+    val bw = w / n
+    val barW = bw * 0.55f
+    val mid = hh / 2
+    for (i in 0 until n) {
+        val lv = an.levels[i]
+        val bh = max(2.5f, lv * hh)
+        val x = i * bw + (bw - barW) / 2
+        drawRoundRect(lerp(c1, c2, lv).copy(alpha = 0.55f + 0.45f * lv), Offset(x, mid - bh / 2), Size(barW, bh), CornerRadius(barW / 2))
+    }
+}
+
+private fun DrawScope.drawRing(an: Analyzer, c1: Color, c2: Color) {
     val c = center
     val minDim = size.minDimension
-    val r0 = minDim * 0.25f
-    val maxLen = minDim * 0.2f
-    val glowR = r0 * (1.9f + an.bass * 0.4f)
+    val r0 = minDim * 0.27f
+    val maxLen = minDim * 0.17f
+    val glowR = r0 * (1.6f + an.bass * 0.35f)
     drawCircle(
-        Brush.radialGradient(listOf(h.glow.copy(alpha = 0.18f + 0.4f * an.bass), Color.Transparent), center = c, radius = glowR),
+        Brush.radialGradient(listOf(c1.copy(alpha = 0.10f + 0.25f * an.bass), Color.Transparent), center = c, radius = glowR),
         radius = glowR, center = c
     )
     val nb = an.bars
     val total = nb * 2
-    val rot = t * 0.12f
-    val sw = (2 * PI * r0 / total * 0.55).toFloat()
+    val sw = (2 * PI * r0 / total * 0.45).toFloat()
     for (i in 0 until total) {
         val bi = if (i < nb) i else total - 1 - i
         val lv = an.levels[bi]
-        val ang = (i.toFloat() / total) * 2f * PI.toFloat() - PI.toFloat() / 2f + rot
+        val ang = (i.toFloat() / total) * 2f * PI.toFloat() - PI.toFloat() / 2f
         val ca = cos(ang); val sa = sin(ang)
-        val r1 = r0 + 10f
-        val r2 = r1 + 4f + lv * maxLen
+        val r1 = r0 + 14f
+        val r2 = r1 + 2f + lv * maxLen
         drawLine(
-            lerp(h.primary, h.accent, lv),
+            lerp(c1, c2, lv).copy(alpha = 0.5f + 0.5f * lv),
             Offset(c.x + ca * r1, c.y + sa * r1), Offset(c.x + ca * r2, c.y + sa * r2),
             strokeWidth = sw, cap = StrokeCap.Round
         )
-        val pr = r1 + 8f + an.peaks[bi] * maxLen
-        drawCircle(h.text.copy(alpha = 0.75f), radius = sw * 0.35f, center = Offset(c.x + ca * pr, c.y + sa * pr))
     }
-    // vòng HUD xoay
-    val ringR = r0 + 4f
-    drawCircle(h.accent.copy(alpha = 0.55f), radius = ringR, center = c, style = Stroke(2f))
-    val outer = r0 + maxLen + 26f
-    val tl = Offset(c.x - outer, c.y - outer)
-    val sz = Size(outer * 2, outer * 2)
-    val deg = t * 22f
-    for (k in 0 until 3) {
-        drawArc(h.primary.copy(alpha = 0.8f), deg + k * 120f, 70f, false, tl, sz, style = Stroke(3f, cap = StrokeCap.Round))
-    }
-    val outer2 = outer + 12f
-    for (k in 0 until 4) {
-        drawArc(
-            h.accent.copy(alpha = 0.5f), -deg * 1.4f + k * 90f, 28f, false,
-            Offset(c.x - outer2, c.y - outer2), Size(outer2 * 2, outer2 * 2), style = Stroke(1.5f)
-        )
-    }
-    val ticks = 72
-    for (i in 0 until ticks) {
-        val a = (i.toFloat() / ticks) * 2f * PI.toFloat()
-        val len = if (i % 6 == 0) 10f else 4f
-        val ro = outer2 + 8f
-        drawLine(
-            h.dim.copy(alpha = 0.5f),
-            Offset(c.x + cos(a) * ro, c.y + sin(a) * ro), Offset(c.x + cos(a) * (ro + len), c.y + sin(a) * (ro + len)),
-            strokeWidth = 1.5f
-        )
-    }
+    drawCircle(Color.White.copy(alpha = 0.08f), radius = r0 + 6f, center = c, style = Stroke(1.5f))
 }
 
-private fun DrawScope.drawBars(an: Analyzer, h: Hud, mirror: Boolean) {
+private fun DrawScope.drawBars(an: Analyzer, c1: Color, c2: Color) {
     val w = size.width
     val hh = size.height
     val nb = an.bars
     val bw = w / nb
-    val seg = 6f
-    val gap = 2.5f
-    val maxH = if (mirror) hh * 0.46f else hh * 0.9f
-    val base = if (mirror) hh / 2 else hh * 0.96f
-    val brushUp = Brush.verticalGradient(listOf(h.accent, h.primary), startY = base - maxH, endY = base)
-    val brushDown = Brush.verticalGradient(listOf(h.primary.copy(alpha = 0.5f), h.accent.copy(alpha = 0.1f)), startY = base, endY = base + maxH)
-    // lưới nền
-    for (k in 1..4) {
-        val y = base - maxH * k / 4f
-        drawLine(h.dim.copy(alpha = 0.08f), Offset(0f, y), Offset(w, y), 1f)
+    val barW = bw * 0.62f
+    val base = hh * 0.66f
+    val maxH = hh * 0.6f
+    val up = Brush.verticalGradient(listOf(c2, c1), startY = base - maxH, endY = base)
+    val down = Brush.verticalGradient(listOf(c1.copy(alpha = 0.28f), Color.Transparent), startY = base, endY = base + maxH * 0.5f)
+    for (k in 1..3) {
+        val y = base - maxH * k / 3f
+        drawLine(Color.White.copy(alpha = 0.05f), Offset(0f, y), Offset(w, y), 1f)
     }
     for (i in 0 until nb) {
-        val x = i * bw + bw * 0.12f
-        val bwi = bw * 0.76f
-        val lv = an.levels[i]
-        val segs = ((lv * maxH) / (seg + gap)).toInt()
-        for (s in 0 until segs) {
-            val y = base - (s + 1) * (seg + gap)
-            drawRect(brushUp, Offset(x, y), Size(bwi, seg))
-            if (mirror) drawRect(brushDown, Offset(x, base + s * (seg + gap) + gap), Size(bwi, seg))
-        }
-        val py = base - an.peaks[i] * maxH - seg
-        drawRect(h.text, Offset(x, py - 3f), Size(bwi, 3f))
-        if (mirror) drawRect(h.text.copy(alpha = 0.4f), Offset(x, base + an.peaks[i] * maxH + seg), Size(bwi, 3f))
+        val x = i * bw + (bw - barW) / 2
+        val bh = max(3f, an.levels[i] * maxH)
+        drawRoundRect(up, Offset(x, base - bh), Size(barW, bh), CornerRadius(barW / 2))
+        drawRoundRect(down, Offset(x, base + 4f), Size(barW, bh * 0.5f), CornerRadius(barW / 2))
+        val py = base - an.peaks[i] * maxH - 8f
+        drawRoundRect(Color.White.copy(alpha = 0.85f), Offset(x, py), Size(barW, 3f), CornerRadius(1.5f))
     }
-    if (mirror) drawLine(h.accent.copy(alpha = 0.6f), Offset(0f, base), Offset(w, base), 1.5f)
 }
 
-private fun DrawScope.drawWave(an: Analyzer, h: Hud, t: Float) {
+private fun DrawScope.drawWave(an: Analyzer, c1: Color, c2: Color) {
     val w = size.width
     val hh = size.height
     val mid = hh / 2
-    for (k in 1..7) {
-        val x = w * k / 8f
-        drawLine(h.dim.copy(alpha = 0.07f), Offset(x, 0f), Offset(x, hh), 1f)
-    }
-    for (k in 1..3) {
-        val y = hh * k / 4f
-        drawLine(h.dim.copy(alpha = if (k == 2) 0.2f else 0.07f), Offset(0f, y), Offset(w, y), 1f)
-    }
-    val amp = hh * 0.42f
-    val gain = 1.6f
-    val path = Path()
+    drawLine(Color.White.copy(alpha = 0.06f), Offset(0f, mid), Offset(w, mid), 1f)
+    val amp = hh * 0.38f
     val n = an.wave.size
+    val path = Path()
     for (i in 0 until n) {
         val x = w * i / (n - 1)
-        val y = mid - (an.wave[i] * gain).coerceIn(-1f, 1f) * amp
+        val env = sin(PI * i / (n - 1)).toFloat()
+        val y = mid - (an.wave[i] * 1.6f).coerceIn(-1f, 1f) * amp * env
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
-    drawPath(path, h.primary.copy(alpha = 0.25f), style = Stroke(14f, cap = StrokeCap.Round))
-    drawPath(path, h.glow.copy(alpha = 0.5f), style = Stroke(6f, cap = StrokeCap.Round))
-    drawPath(path, h.accent, style = Stroke(2.5f, cap = StrokeCap.Round))
-    // vệt quét
-    val sx = ((t * 0.35f) % 1f) * w
-    drawRect(
-        Brush.horizontalGradient(listOf(Color.Transparent, h.primary.copy(alpha = 0.12f)), startX = sx - w * 0.25f, endX = sx),
-        Offset(sx - w * 0.25f, 0f), Size(w * 0.25f, hh)
-    )
-    val e = an.energy
-    drawCircle(h.glow.copy(alpha = 0.6f * e), radius = 6f + e * 10f, center = Offset(sx, mid))
+    val brush = Brush.horizontalGradient(listOf(c1, c2, c1))
+    drawPath(path, c1.copy(alpha = 0.18f), style = Stroke(16f, cap = StrokeCap.Round))
+    drawPath(path, brush, style = Stroke(3f, cap = StrokeCap.Round))
 }

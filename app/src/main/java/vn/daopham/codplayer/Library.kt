@@ -154,7 +154,7 @@ object Library {
 
 object Art {
     private val cache = LruCache<Long, Bitmap>(30)
-    private val missing = HashSet<Long>()
+    private val missing: MutableSet<Long> = java.util.Collections.synchronizedSet(HashSet<Long>())
 
     fun load(ctx: Context, t: Track): Bitmap? {
         cache.get(t.id)?.let { return it }
@@ -177,6 +177,25 @@ object Art {
         return b
     }
 
+    private val thumbs = LruCache<Long, Bitmap>(400)
+    private val thumbMissing = HashSet<Long>()
+
+    /** Ảnh bìa nhỏ cho danh sách. */
+    fun thumb(ctx: Context, t: Track): Bitmap? {
+        thumbs.get(t.id)?.let { return it }
+        synchronized(thumbMissing) { if (t.id in thumbMissing) return null }
+        var bmp: Bitmap? = null
+        if (Build.VERSION.SDK_INT >= 29) {
+            try { bmp = ctx.contentResolver.loadThumbnail(t.uri, Size(144, 144), null) } catch (_: Throwable) {}
+        }
+        if (bmp == null) {
+            load(ctx, t)?.let { big -> bmp = Bitmap.createScaledBitmap(big, 144, 144 * big.height / maxOf(1, big.width), true) }
+        }
+        val b = bmp
+        if (b != null) thumbs.put(t.id, b) else synchronized(thumbMissing) { thumbMissing.add(t.id) }
+        return b
+    }
+
     private fun decode(bytes: ByteArray, max: Int): Bitmap? {
         val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)
@@ -191,7 +210,7 @@ data class Tech(val sampleRate: Int, val bits: Int, val channels: Int, val kbps:
 }
 
 object TechReader {
-    private val cache = HashMap<Long, Tech>()
+    private val cache = java.util.concurrent.ConcurrentHashMap<Long, Tech>()
 
     fun read(ctx: Context, t: Track): Tech {
         cache[t.id]?.let { return it }

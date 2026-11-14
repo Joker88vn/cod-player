@@ -16,21 +16,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class Tab(val title: String, val icon: ImageVector) {
-    LIBRARY("THƯ VIỆN", Icons.Rounded.LibraryMusic),
-    PLAYING("ĐANG PHÁT", Icons.Rounded.GraphicEq),
-    EQ("CHỈNH ÂM", Icons.Rounded.Tune),
-    SETTINGS("CÀI ĐẶT", Icons.Rounded.Settings),
+    LIBRARY("Thư viện", Icons.Rounded.LibraryMusic),
+    PLAYING("Đang phát", Icons.Rounded.GraphicEq),
+    EQ("Chỉnh âm", Icons.Rounded.Tune),
+    SETTINGS("Cài đặt", Icons.Rounded.Settings),
 }
 
 enum class VizMode(val label: String) {
-    RING("Lõi năng lượng"),
-    BARS("Cột phổ cổ điển"),
-    MIRROR("Phổ gương"),
+    ART("Ảnh bìa + phổ"),
+    RING("Vòng phổ"),
+    BARS("Cột phổ"),
     WAVE("Sóng âm"),
 }
 
 enum class FmtFilter(val label: String) {
-    ALL("TẤT CẢ"), FLAC("FLAC"), WAV("WAV"), MP3("MP3"), OTHER("KHÁC");
+    ALL("Tất cả"), FLAC("FLAC"), WAV("WAV"), MP3("MP3"), OTHER("Khác");
 
     fun match(t: Track): Boolean = when (this) {
         ALL -> true
@@ -48,7 +48,7 @@ enum class SortBy(val label: String) {
 object Ui {
     var tab by mutableStateOf(Tab.LIBRARY)
     var theme by mutableIntStateOf(0)
-    var vizMode by mutableStateOf(VizMode.RING)
+    var vizMode by mutableStateOf(VizMode.ART)
     var vizDelay by mutableIntStateOf(220)
     var minDur by mutableIntStateOf(10)
     var filter by mutableStateOf(FmtFilter.ALL)
@@ -106,7 +106,7 @@ object Prefs {
         val s = ctx.applicationContext.getSharedPreferences("codplayer", Context.MODE_PRIVATE)
         sp = s
         Ui.theme = s.getInt("theme", 0)
-        Ui.vizMode = VizMode.values().getOrElse(s.getInt("viz", 0)) { VizMode.RING }
+        Ui.vizMode = VizMode.values().getOrElse(s.getInt("viz", 0)) { VizMode.ART }
         Ui.vizDelay = s.getInt("vizDelay", 220)
         Ui.minDur = s.getInt("minDur", 10)
         Ui.sort = SortBy.values().getOrElse(s.getInt("sort", 0)) { SortBy.TITLE }

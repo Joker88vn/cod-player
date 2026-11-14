@@ -11,8 +11,8 @@ android {
         applicationId = "vn.daopham.codplayer"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     // Khoá ký cố định: các bản sau cài đè lên bản trước được
@@ -61,4 +61,5 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")
+    implementation("androidx.palette:palette-ktx:1.0.0")
 }
