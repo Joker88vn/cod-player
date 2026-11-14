@@ -1,6 +1,8 @@
 package vn.daopham.codplayer
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -64,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NowPlayingScreen(art: ImageBitmap?, accent: Color) {
     val h = LocalHud.current
@@ -104,27 +107,16 @@ fun NowPlayingScreen(art: ImageBitmap?, accent: Color) {
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 22.dp)) {
         Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                SectionLabel("Đang phát")
-                Txt(
-                    if (Ui.folder != null) Ui.folder!!.substringAfterLast('/') else "Bài ${PlayerHolder.index + 1} / ${PlayerHolder.queue.size}",
-                    12.sp, h.text.copy(alpha = 0.8f)
-                )
+                SectionLabel("Đang phát từ")
+                val src = Ui.folder?.substringAfterLast('/') ?: when (Ui.filter) { FmtFilter.ALL -> "Tất cả bài hát"; else -> "Nhạc ${Ui.filter.label}" }
+                Txt(src, 13.sp, h.text.copy(alpha = 0.85f), FontWeight.Medium)
             }
-            var vizOpen by remember { mutableStateOf(false) }
-            Box {
-                IconButton(onClick = { vizOpen = true }) { Icon(Icons.Rounded.AutoAwesome, "Hiệu ứng", tint = h.text) }
-                DropdownMenu(vizOpen, { vizOpen = false }) {
-                    VizMode.values().forEach { m ->
-                        DropdownMenuItem(
-                            text = { Text(m.label, color = if (m == Ui.vizMode) accent else h.text) },
-                            onClick = { Ui.vizMode = m; Prefs.saveUi(); vizOpen = false }
-                        )
-                    }
-                }
+            Box(Modifier.clip(Pill).background(Color.White.copy(alpha = 0.08f)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                Text("${PlayerHolder.index + 1} / ${PlayerHolder.queue.size}", color = h.text.copy(alpha = 0.8f), fontSize = 12.sp)
             }
         }
 
-        VizStage(Ui.vizMode, art, accent, accent2, Modifier.fillMaxWidth().weight(1f).padding(vertical = 8.dp)) {
+        VizStage(Ui.vizMode, art, t.title, accent, accent2, Modifier.fillMaxWidth().weight(1f).padding(vertical = 8.dp)) {
             val m = VizMode.values()
             Ui.vizMode = m[(Ui.vizMode.ordinal + 1) % m.size]
             Prefs.saveUi()
@@ -132,12 +124,12 @@ fun NowPlayingScreen(art: ImageBitmap?, accent: Color) {
 
         Spacer(Modifier.height(10.dp))
         Text(
-            t.title, color = h.text, fontSize = 22.sp, fontWeight = FontWeight.Bold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth()
+            t.title, color = h.text, fontSize = 23.sp, fontWeight = FontWeight.Bold,
+            maxLines = 1, modifier = Modifier.fillMaxWidth().basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 1500)
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            listOf(t.artist, t.album).filter { it.isNotBlank() }.joinToString("  ·  ").ifBlank { t.fileName },
+            t.subtitle,
             color = h.text.copy(alpha = 0.65f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth()
         )
@@ -187,30 +179,63 @@ fun NowPlayingScreen(art: ImageBitmap?, accent: Color) {
         Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Row(
                 Modifier.clip(Pill).background(Color.White.copy(alpha = 0.08f)).clickable { Ui.tab = Tab.EQ }
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                    .padding(horizontal = 14.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Rounded.Tune, null, tint = if (EqState.enabled) accent else h.dim, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Txt(if (EqState.enabled) EqState.preset else "EQ tắt", 12.sp, h.text, FontWeight.Medium)
+                Icon(Icons.Rounded.Tune, null, tint = if (EqState.enabled) accent else h.dim, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(7.dp))
+                Txt(if (EqState.enabled) EqState.preset else "EQ tắt", 13.sp, h.text, FontWeight.Medium)
             }
             Spacer(Modifier.weight(1f))
-            if (PlayerHolder.sleepAt > 0) {
-                var left by remember { mutableLongStateOf(0L) }
-                LaunchedEffect(PlayerHolder.sleepAt) {
-                    while (true) { left = PlayerHolder.sleepAt - System.currentTimeMillis(); delay(1000) }
+            var vizOpen by remember { mutableStateOf(false) }
+            Box {
+                RoundIcon(Icons.Rounded.AutoAwesome, "Hiệu ứng", h.text) { vizOpen = true }
+                DropdownMenu(vizOpen, { vizOpen = false }) {
+                    VizMode.values().forEach { m ->
+                        DropdownMenuItem(
+                            text = { Text(m.label, color = if (m == Ui.vizMode) accent else h.text) },
+                            onClick = { Ui.vizMode = m; Prefs.saveUi(); vizOpen = false }
+                        )
+                    }
                 }
-                Row(
-                    Modifier.clip(Pill).background(Color.White.copy(alpha = 0.08f)).padding(horizontal = 12.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Rounded.Bedtime, null, tint = accent, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(fmtTime(left.coerceAtLeast(0)), color = h.text, fontSize = 12.sp)
+            }
+            Spacer(Modifier.width(10.dp))
+            var sleepOpen by remember { mutableStateOf(false) }
+            Box {
+                if (PlayerHolder.sleepAt > 0) {
+                    var left by remember { mutableLongStateOf(0L) }
+                    LaunchedEffect(PlayerHolder.sleepAt) {
+                        while (true) { left = PlayerHolder.sleepAt - System.currentTimeMillis(); delay(1000) }
+                    }
+                    Row(
+                        Modifier.clip(Pill).background(accent.copy(alpha = 0.2f)).clickable { sleepOpen = true }
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.Bedtime, null, tint = accent, modifier = Modifier.size(17.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(fmtTime(left.coerceAtLeast(0)), color = h.text, fontSize = 13.sp)
+                    }
+                } else {
+                    RoundIcon(Icons.Rounded.Bedtime, "Hẹn giờ tắt", h.text) { sleepOpen = true }
+                }
+                DropdownMenu(sleepOpen, { sleepOpen = false }) {
+                    DropdownMenuItem(text = { Text("Tắt hẹn giờ") }, onClick = { PlayerHolder.setSleep(0); sleepOpen = false })
+                    listOf(15, 30, 45, 60, 90, 120).forEach { m ->
+                        DropdownMenuItem(text = { Text("Sau $m phút") }, onClick = { PlayerHolder.setSleep(m); sleepOpen = false })
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun RoundIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, tint: Color, onClick: () -> Unit) {
+    Box(
+        Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)).clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) { Icon(icon, desc, tint = tint, modifier = Modifier.size(19.dp)) }
 }
 
 fun lerpColor(a: Color, b: Color, f: Float) = androidx.compose.ui.graphics.lerp(a, b, f)

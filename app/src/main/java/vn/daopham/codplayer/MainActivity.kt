@@ -156,7 +156,7 @@ fun Root() {
 
     val cur = PlayerHolder.current
     val art by rememberArt(cur)
-    val accent by rememberAccent(art, h.primary)
+    val accent by rememberAccent(art, if (cur != null) coverColors(cur.title).first else h.primary)
 
     Box(Modifier.fillMaxSize().background(h.bg)) {
         if (!granted) {
@@ -172,7 +172,7 @@ fun Root() {
             return@Box
         }
         val playing = Ui.tab == Tab.PLAYING
-        if (playing) BlurBackdrop(art, accent)
+        if (playing) BlurBackdrop(art, accent, cur?.title ?: "")
         Column(Modifier.fillMaxSize()) {
             if (!playing) TopBar()
             Box(Modifier.weight(1f)) {
@@ -249,7 +249,7 @@ private fun MiniPlayer(t: Track, art: ImageBitmap?, accent: Color) {
             .clickable { Ui.tab = Tab.PLAYING }
     ) {
         Row(Modifier.padding(start = 8.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp))) { ArtOrEmblem(art, Modifier.fillMaxSize(), 22.dp) }
+            Box(Modifier.size(46.dp).clip(RoundedCornerShape(10.dp))) { Cover(art, t.title, Modifier.fillMaxSize()) }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Txt(t.title, 14.sp, h.text, FontWeight.SemiBold)
@@ -257,7 +257,7 @@ private fun MiniPlayer(t: Track, art: ImageBitmap?, accent: Color) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FmtBadge(t.fmt)
                     Spacer(Modifier.width(6.dp))
-                    Txt(t.artist.ifBlank { t.fileName }, 12.sp, h.dim)
+                    Txt(t.subtitle, 12.sp, h.dim)
                 }
             }
             IconButton(onClick = { PlayerHolder.toggle(ctx) }) {

@@ -56,6 +56,7 @@ object Ui {
     var folder by mutableStateOf<String?>(null)
     var query by mutableStateOf("")
     var folderMode by mutableStateOf(false)
+    var hideRec by mutableStateOf(true)
 }
 
 object EqState {
@@ -109,6 +110,7 @@ object Prefs {
         Ui.vizMode = VizMode.values().getOrElse(s.getInt("viz", 0)) { VizMode.ART }
         Ui.vizDelay = s.getInt("vizDelay", 220)
         Ui.minDur = s.getInt("minDur", 10)
+        Ui.hideRec = s.getBoolean("hideRec", true)
         Ui.sort = SortBy.values().getOrElse(s.getInt("sort", 0)) { SortBy.TITLE }
         EqState.enabled = s.getBoolean("eqOn", true)
         EqState.preamp = s.getFloat("preamp", 0f)
@@ -134,7 +136,7 @@ object Prefs {
 
     fun saveUi() {
         sp?.edit()?.putInt("theme", Ui.theme)?.putInt("viz", Ui.vizMode.ordinal)?.putInt("vizDelay", Ui.vizDelay)
-            ?.putInt("minDur", Ui.minDur)?.putInt("sort", Ui.sort.ordinal)?.apply()
+            ?.putInt("minDur", Ui.minDur)?.putInt("sort", Ui.sort.ordinal)?.putBoolean("hideRec", Ui.hideRec)?.apply()
     }
 
     fun saveEq() {

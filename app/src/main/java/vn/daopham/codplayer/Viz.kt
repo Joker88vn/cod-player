@@ -172,7 +172,7 @@ class Analyzer(val bars: Int) {
 }
 
 @Composable
-fun VizStage(mode: VizMode, art: ImageBitmap?, c1: Color, c2: Color, modifier: Modifier = Modifier, onTap: () -> Unit) {
+fun VizStage(mode: VizMode, art: ImageBitmap?, seed: String, c1: Color, c2: Color, modifier: Modifier = Modifier, onTap: () -> Unit) {
     val an = remember { Analyzer(48) }
     var frame by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) {
@@ -195,7 +195,7 @@ fun VizStage(mode: VizMode, art: ImageBitmap?, c1: Color, c2: Color, modifier: M
                             .padding(6.dp)
                             .shadow(24.dp, RoundedCornerShape(20.dp))
                             .clip(RoundedCornerShape(20.dp))
-                    ) { ArtOrEmblem(art, Modifier.fillMaxSize(), 72.dp) }
+                    ) { Cover(art, seed, Modifier.fillMaxSize()) }
                 }
                 Spacer(Modifier.height(10.dp))
                 Canvas(Modifier.fillMaxWidth().height(46.dp)) {
@@ -219,7 +219,7 @@ fun VizStage(mode: VizMode, art: ImageBitmap?, c1: Color, c2: Color, modifier: M
                         }
                         .shadow(20.dp, CircleShape)
                         .clip(CircleShape)
-                ) { ArtOrEmblem(art, Modifier.fillMaxSize(), 56.dp) }
+                ) { Cover(art, seed, Modifier.fillMaxSize()) }
             }
             VizMode.BARS -> Canvas(Modifier.fillMaxSize()) {
                 @Suppress("UNUSED_VARIABLE") val f = frame

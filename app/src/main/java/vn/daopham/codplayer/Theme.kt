@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -191,28 +193,66 @@ fun Emblem(size: Dp, modifier: Modifier = Modifier) {
     }
 }
 
+private val CoverPairs = listOf(
+    0xFFFF5F6D to 0xFFFFC371, 0xFF7F53AC to 0xFF647DEE, 0xFF11998E to 0xFF38EF7D, 0xFFFC466B to 0xFF3F5EFB,
+    0xFFF7971E to 0xFFFFD200, 0xFF00C6FF to 0xFF0072FF, 0xFFEE0979 to 0xFFFF6A00, 0xFF8E2DE2 to 0xFF4A00E0,
+    0xFF43C6AC to 0xFF2B5876, 0xFFDA22FF to 0xFF9733EE, 0xFFFF416C to 0xFFFF4B2B, 0xFF1FA2FF to 0xFF12D8FA,
+    0xFFB24592 to 0xFFF15F79, 0xFF4E54C8 to 0xFF8F94FB, 0xFFF857A6 to 0xFFFF5858, 0xFF00B09B to 0xFF96C93D,
+)
+
+/** Cặp màu cố định theo tên bài: cùng một bài luôn ra cùng màu. */
+fun coverColors(seed: String): Pair<Color, Color> {
+    var hsh = 7
+    for (ch in seed) hsh = hsh * 31 + ch.code
+    val p = CoverPairs[Math.floorMod(hsh, CoverPairs.size)]
+    return Color(p.first) to Color(p.second)
+}
+
+private fun initials(seed: String): String {
+    val words = seed.split(' ', '-', '_', '.', '(', ')', '[', ']').filter { w -> w.any { it.isLetterOrDigit() } }
+    val chars = words.take(2).mapNotNull { w -> w.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar() }
+    return chars.joinToString("").ifEmpty { "♪" }
+}
+
+/** Ảnh bìa: dùng ảnh thật nếu có, không thì tự vẽ bìa chuyển màu + chữ cái đầu. */
 @Composable
-fun ArtOrEmblem(art: ImageBitmap?, modifier: Modifier, iconSize: Dp = 40.dp) {
-    val h = LocalHud.current
+fun Cover(art: ImageBitmap?, seed: String, modifier: Modifier) {
     if (art != null) {
         Image(art, null, modifier, contentScale = ContentScale.Crop)
-    } else {
-        Box(
-            modifier.background(Brush.linearGradient(listOf(h.surface2, Color(0xFF101014)), Offset.Zero, Offset.Infinite)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Rounded.MusicNote, null, tint = h.dim.copy(alpha = 0.6f), modifier = Modifier.size(iconSize))
+        return
+    }
+    val (c1, c2) = remember(seed) { coverColors(seed) }
+    val text = remember(seed) { initials(seed) }
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val side = minOf(maxWidth, maxHeight)
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val hh = size.height
+            drawRect(Brush.linearGradient(listOf(c1, c2), Offset(0f, 0f), Offset(w, hh)))
+            drawCircle(Color.White.copy(alpha = 0.12f), radius = w * 0.55f, center = Offset(w * 0.95f, hh * 0.05f))
+            drawCircle(Color.Black.copy(alpha = 0.10f), radius = w * 0.45f, center = Offset(w * 0.05f, hh * 1.0f))
+            val sw = maxOf(1f, w * 0.012f)
+            for (k in 1..5) {
+                drawCircle(
+                    Color.White.copy(alpha = 0.10f - k * 0.012f), radius = w * (0.18f + k * 0.13f),
+                    center = Offset(w, hh), style = Stroke(sw)
+                )
+            }
+            drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f))))
         }
+        Text(
+            text, color = Color.White, fontSize = (side.value * 0.34f).sp, fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.5).sp, maxLines = 1
+        )
     }
 }
 
 /** Nền ảnh bìa làm mờ kiểu Poweramp. */
 @Composable
-fun BlurBackdrop(art: ImageBitmap?, accent: Color) {
+fun BlurBackdrop(art: ImageBitmap?, accent: Color, seed: String = "") {
     val h = LocalHud.current
     Box(Modifier.fillMaxSize().background(h.bg)) {
         if (art != null) {
-            val small = androidx.compose.runtime.remember(art) {
+            val small = remember(art) {
                 val b = art.asAndroidBitmap()
                 Bitmap.createScaledBitmap(b, 40, maxOf(1, 40 * b.height / maxOf(1, b.width)), true).asImageBitmap()
             }
@@ -222,9 +262,15 @@ fun BlurBackdrop(art: ImageBitmap?, accent: Color) {
                 contentScale = ContentScale.Crop, filterQuality = FilterQuality.High, alpha = 0.55f
             )
         } else {
+            val (g1, g2) = coverColors(seed)
             Box(
                 Modifier.fillMaxSize().background(
-                    Brush.radialGradient(listOf(accent.copy(alpha = 0.25f), Color.Transparent), center = Offset(500f, 300f), radius = 1400f)
+                    Brush.radialGradient(listOf(g1.copy(alpha = 0.45f), Color.Transparent), center = Offset(150f, 250f), radius = 1300f)
+                )
+            )
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.radialGradient(listOf(g2.copy(alpha = 0.30f), Color.Transparent), center = Offset(1100f, 900f), radius = 1200f)
                 )
             )
         }

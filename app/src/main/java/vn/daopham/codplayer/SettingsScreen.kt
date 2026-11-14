@@ -23,6 +23,8 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -97,6 +99,17 @@ fun SettingsScreen() {
             Spacer(Modifier.height(14.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
+                    Txt("Ẩn file ghi âm", 14.sp, h.text, FontWeight.Medium)
+                    Txt("Bỏ các bản ghi âm, cuộc gọi khỏi thư viện", 12.sp, h.dim)
+                }
+                Switch(
+                    Ui.hideRec, { Ui.hideRec = it; Prefs.saveUi(); scope.launch { Library.scan(ctx) } },
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = h.primary, uncheckedTrackColor = h.surface2)
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
                     Txt(if (Library.loading) "Đang quét…" else "${Library.tracks.size} bài trong máy", 14.sp, h.text, FontWeight.Medium)
                     Txt("FLAC ${Library.tracks.count { it.fmt == Fmt.FLAC }} · WAV ${Library.tracks.count { it.fmt == Fmt.WAV }} · MP3 ${Library.tracks.count { it.fmt == Fmt.MP3 }}", 12.sp, h.dim)
                 }
@@ -122,7 +135,7 @@ fun SettingsScreen() {
                 Spacer(Modifier.width(14.dp))
                 Column {
                     Txt("COD Player", 16.sp, h.text, FontWeight.SemiBold)
-                    Txt("Phiên bản 1.1", 12.sp, h.dim)
+                    Txt("Phiên bản 1.2", 12.sp, h.dim)
                     Txt("MP3 · FLAC · WAV · AAC · OGG · EQ 10 băng", 12.sp, h.dim)
                 }
             }

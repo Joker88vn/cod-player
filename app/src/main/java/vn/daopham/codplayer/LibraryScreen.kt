@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -145,7 +146,7 @@ fun LibraryScreen() {
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FmtFilter.values().forEach { f ->
+            FmtFilter.values().filter { it == FmtFilter.ALL || (counts[it] ?: 0) > 0 || Ui.filter == it }.forEach { f ->
                 PillChip(f.label, Ui.filter == f, count = "%,d".format(counts[f] ?: 0).replace(',', '.')) { Ui.filter = f }
             }
         }
@@ -172,8 +173,8 @@ fun LibraryScreen() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Txt("${list.size} bài  ·  ${fmtTime(totalMs)}", 13.sp, h.text, FontWeight.SemiBold)
-                Txt("${fmtSize(totalSize)}  ·  ${Ui.sort.label}", 11.sp, h.dim)
+                Txt("${list.size} bài", 15.sp, h.text, FontWeight.SemiBold)
+                Txt("${fmtTime(totalMs)}  ·  ${fmtSize(totalSize)}", 11.5.sp, h.dim)
             }
             if (cur != null) {
                 IconButton(onClick = {
@@ -181,9 +182,12 @@ fun LibraryScreen() {
                     if (idx >= 0) scope.launch { state.animateScrollToItem((idx - 3).coerceAtLeast(0)) }
                 }) { Icon(Icons.Rounded.MyLocation, "Tới bài đang phát", tint = h.dim, modifier = Modifier.size(20.dp)) }
             }
-            PillButton("Trộn", Icons.Rounded.Shuffle, filled = false) {
-                if (list.isNotEmpty()) PlayerHolder.playList(ctx, list, list.indices.random(), shuffleOn = true)
-            }
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).background(h.surface2).clickable {
+                    if (list.isNotEmpty()) PlayerHolder.playList(ctx, list, list.indices.random(), shuffleOn = true)
+                },
+                contentAlignment = Alignment.Center
+            ) { Icon(Icons.Rounded.Shuffle, "Trộn bài", tint = h.text, modifier = Modifier.size(20.dp)) }
             Spacer(Modifier.width(8.dp))
             PillButton("Phát", Icons.Rounded.PlayArrow) {
                 if (list.isNotEmpty()) PlayerHolder.playList(ctx, list, 0, shuffleOn = false)
@@ -220,7 +224,7 @@ private fun TrackRow(i: Int, t: Track, digits: Int, playing: Boolean, onClick: (
     Row(
         Modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(66.dp)
             .background(if (playing) h.primary.copy(alpha = 0.08f) else Color.Transparent)
             .clickable { onClick() }
             .padding(start = 8.dp, end = 16.dp),
@@ -231,25 +235,18 @@ private fun TrackRow(i: Int, t: Track, digits: Int, playing: Boolean, onClick: (
             else Text((i + 1).toString(), color = h.dim.copy(alpha = 0.7f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
         }
         Spacer(Modifier.width(4.dp))
-        Box(Modifier.size(46.dp).clip(RoundedCornerShape(8.dp))) { ArtOrEmblem(thumb, Modifier.fillMaxSize(), 20.dp) }
+        Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))) { Cover(thumb, t.title, Modifier.fillMaxSize()) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Txt(t.title, 15.sp, if (playing) h.primary else h.text, FontWeight.Medium)
+            Txt(t.title, 15.sp, if (playing) h.primary else h.text, if (playing) FontWeight.SemiBold else FontWeight.Medium)
             Spacer(Modifier.height(2.dp))
-            Txt(
-                listOf(t.artist, t.album).filter { it.isNotBlank() }.joinToString("  ·  ").ifBlank { t.fileName },
-                12.5.sp, h.dim
-            )
+            Txt(t.subtitle, 12.5.sp, h.dim)
         }
         Spacer(Modifier.width(10.dp))
         Column(horizontalAlignment = Alignment.End) {
             Text(fmtTime(t.durationMs), color = h.dim, fontSize = 12.sp)
             Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val kb = kbpsOf(t)
-                if (kb > 0) { Text("$kb", color = h.dim.copy(alpha = 0.7f), fontSize = 10.sp); Spacer(Modifier.width(5.dp)) }
-                FmtBadge(t.fmt)
-            }
+            FmtBadge(t.fmt)
         }
     }
 }

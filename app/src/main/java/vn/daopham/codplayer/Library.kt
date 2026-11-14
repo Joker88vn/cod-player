@@ -60,6 +60,16 @@ data class Track(
     val fmt: Fmt = Fmt.of(ext)
     val display: String get() = if (artist.isBlank()) title else "$artist - $title"
 
+    /** Album có nghĩa (bỏ trường hợp album chỉ là tên thư mục như Download, Recordings). */
+    val niceAlbum: String get() = if (album.isBlank() || album.equals(folder.substringAfterLast('/'), true)) "" else album
+
+    val subtitle: String get() = listOf(artist, niceAlbum).filter { it.isNotBlank() }.joinToString("  ·  ").ifBlank { "Không rõ nghệ sĩ" }
+
+    val isRecording: Boolean get() {
+        val f = folder.lowercase()
+        return f.contains("recording") || f.contains("recorder") || f.contains("ghi âm") || f.contains("call") || f.contains("voice")
+    }
+
     fun toMediaItem(): MediaItem {
         val art = if (albumId > 0) ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId) else null
         return MediaItem.Builder()
@@ -103,6 +113,7 @@ object Library {
         )
         if (Build.VERSION.SDK_INT >= 29) cols += MediaStore.Audio.Media.RELATIVE_PATH
         if (Build.VERSION.SDK_INT >= 30) cols += MediaStore.Audio.Media.BITRATE
+        if (Build.VERSION.SDK_INT >= 31) cols += MediaStore.Audio.Media.IS_RECORDING
         val sel = "${MediaStore.Audio.Media.DURATION} >= ? AND ${MediaStore.Audio.Media.IS_RINGTONE} = 0 AND " +
             "${MediaStore.Audio.Media.IS_NOTIFICATION} = 0 AND ${MediaStore.Audio.Media.IS_ALARM} = 0"
         ctx.contentResolver.query(base, cols.toTypedArray(), sel, arrayOf((Ui.minDur * 1000).toString()), null)?.use { c ->
@@ -118,7 +129,9 @@ object Library {
             val iData = c.getColumnIndex(MediaStore.Audio.Media.DATA)
             val iRel = if (Build.VERSION.SDK_INT >= 29) c.getColumnIndex(MediaStore.Audio.Media.RELATIVE_PATH) else -1
             val iBit = if (Build.VERSION.SDK_INT >= 30) c.getColumnIndex(MediaStore.Audio.Media.BITRATE) else -1
+            val iRec = if (Build.VERSION.SDK_INT >= 31) c.getColumnIndex(MediaStore.Audio.Media.IS_RECORDING) else -1
             while (c.moveToNext()) {
+                if (Ui.hideRec && iRec >= 0 && c.getInt(iRec) != 0) continue
                 val id = c.getLong(iId)
                 val data = if (iData >= 0) c.getString(iData) ?: "" else ""
                 val name = (if (iName >= 0) c.getString(iName) else null) ?: data.substringAfterLast('/')
@@ -148,7 +161,7 @@ object Library {
                 )
             }
         }
-        return out
+        return if (Ui.hideRec) out.filterNot { it.isRecording } else out
     }
 }
 
