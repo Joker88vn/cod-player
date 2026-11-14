@@ -1,0 +1,7 @@
+-dontwarn android.**
+-dontwarn com.google.errorprone.**
+-dontwarn com.google.j2objc.**
+-dontwarn org.checkerframework.**
+-dontwarn javax.annotation.**
+-dontwarn com.google.common.**
+-keep class vn.daopham.codplayer.PlaybackService { *; }

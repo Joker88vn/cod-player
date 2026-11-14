@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Biểu tượng: khiên lục giác + cột phổ âm thanh -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFC23D"
+        android:pathData="M54,22 L82,38 L82,70 L54,86 L26,70 L26,38 Z" />
+    <path android:fillColor="#E62429"
+        android:pathData="M54,27 L77.5,40.5 L77.5,67.5 L54,81 L30.5,67.5 L30.5,40.5 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M38,56h5v10h-5z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M45,46h5v20h-5z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M52,38h5v28h-5z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M59,48h5v18h-5z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M66,54h5v12h-5z" />
+</vector>
